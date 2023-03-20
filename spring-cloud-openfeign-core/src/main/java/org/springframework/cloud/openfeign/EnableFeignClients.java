@@ -38,7 +38,8 @@ import org.springframework.context.annotation.Import;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Documented
-@Import(FeignClientsRegistrar.class)
+@Import(FeignClientsRegistrar.class) //注册器：一般以 Registrar 结尾，完成自动注册
+//开启某项功能。其实它们本质上是为了导入某个类来完成某项功能。
 public @interface EnableFeignClients {
 
 	/**

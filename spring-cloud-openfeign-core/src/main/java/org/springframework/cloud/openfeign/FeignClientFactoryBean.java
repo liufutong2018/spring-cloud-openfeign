@@ -135,6 +135,7 @@ public class FeignClientFactoryBean
 		Logger logger = loggerFactory.create(type);
 
 		// @formatter:off
+		// 从当前FeignClient对应的Spring 子容器中获取指定类型的实例
 		Feign.Builder builder = get(context, Feign.Builder.class)
 				// required values
 				.logger(logger)
@@ -360,6 +361,7 @@ public class FeignClientFactoryBean
 	}
 
 	protected <T> T get(FeignClientFactory context, Class<T> type) {
+		// 从FeignContext的map集合contexts 中获取指定Feign名称contextId对应的Spring子容器，并从该子容器中获取指定类型type的实例
 		T instance = context.getInstance(contextId, type);
 		if (instance == null) {
 			throw new IllegalStateException("No bean found of type " + type + " for " + contextId);
@@ -422,33 +424,40 @@ public class FeignClientFactoryBean
 	}
 
 	/**
-	 * @param <T> the target type of the Feign client
+	 * @param <T> the target type of the Feign client； 
 	 * @return a {@link Feign} client created with the specified data and the context
 	 * information
-	 */
+	 */ //FeignClient的创建
 	@SuppressWarnings("unchecked")
 	<T> T getTarget() {
 		FeignClientFactory feignClientFactory = beanFactory != null ? beanFactory.getBean(FeignClientFactory.class)
 				: applicationContext.getBean(FeignClientFactory.class);
+		// 从Spring子容器中获取相应的实例
 		Feign.Builder builder = feign(feignClientFactory);
+		// 若urL属性为空，则说明其要采用负裁均衡方式调用提供者
 		if (!StringUtils.hasText(url) && !isUrlAvailableInConfig(contextId)) {
 
 			if (LOG.isInfoEnabled()) {
 				LOG.info("For '" + name + "' URL not provided. Will try picking an instance via load-balancing.");
 			}
+			// 若name属性不以http开头，则...拼接上
 			if (!name.startsWith("http")) {
 				url = "http://" + name;
 			}
 			else {
 				url = name;
 			}
+			// 将规范化的path属性连接到urL后，规范化path: path属性不以斜杠(/)开头，则为其添加斜杠，以斜杠结尾，则去尾部斜杠
 			url += cleanPath();
+			// 负载均衡
 			return (T) loadBalance(builder, feignClientFactory, new HardCodedTarget<>(type, name, url));
 		}
+		// 这是urL不为空的情况，即采用直连方式访问提供者
 		if (StringUtils.hasText(url) && !url.startsWith("http")) {
 			url = "http://" + url;
 		}
 		String url = this.url + cleanPath();
+		// 从Spring 子容器中获取Client
 		Client client = getOptional(feignClientFactory, Client.class);
 		if (client != null) {
 			if (client instanceof FeignBlockingLoadBalancerClient) {
@@ -461,12 +470,13 @@ public class FeignClientFactoryBean
 				// but Spring Cloud LoadBalancer is on the classpath, so unwrap
 				client = ((RetryableFeignBlockingLoadBalancerClient) client).getDelegate();
 			}
-			builder.client(client);
+			builder.client(client); // 直连方式
 		}
 
 		applyBuildCustomizers(feignClientFactory, builder);
 
 		Targeter targeter = get(feignClientFactory, Targeter.class);
+		// 
 		return targeter.target(this, builder, feignClientFactory, resolveTarget(feignClientFactory, contextId, url));
 	}
 
